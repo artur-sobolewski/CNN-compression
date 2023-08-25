@@ -1,7 +1,7 @@
   # A Study of Architecture Optimization Techniques for Convolutional Neural Networks
 
 
-This repository contains the code for the experiments conducted as part of the work 'A Study of Architecture Optimization Techniques for Convolutional Neural Networks'.
+This repository contains the code for the experiments conducted as part of the work 'A Study of Architecture Optimization Techniques for Convolutional Neural Networks' (https://doi.org/10.1007/978-3-031-37720-4_25).
 
 All our experiments are reproducable. 
 
@@ -26,7 +26,7 @@ Deep Convolutional Neural Networks (CNNs) have become dominant in computer visio
 |         Fire modules             |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
 |       No FC classifier           |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |
 |        Nx1 - 1xN Conv.           |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
-|            DWconv                |  -  |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
+|            DWconv                |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
 |         Shuffle mech.            |  -  |  -  |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |
 |       Inv. bottlenecks           |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
 |      Optimization before GAP     |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |
