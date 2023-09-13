@@ -62,7 +62,7 @@ Deep Convolutional Neural Networks (CNNs) have become dominant in computer visio
 |        **Accuracy [%]**     | 71.91 |71.73 | 70.93 |66.26 |67.77|65.19|63.22|59.75|60.56|61.27|61.83|60.08|
 
 
-### ResNet-101 - pruning
+### ResNet-101 trained on CIFAR-10 - pruning
 
 <table>
     <thead>
@@ -198,6 +198,184 @@ Deep Convolutional Neural Networks (CNNs) have become dominant in computer visio
             <td>-</td>
             <td>-</td>
             <td>-</td>
+        </tr>
+    </tbody>
+</table>
+
+
+## The continuation of the study 
+
+title
+
+## Abstract
+
+In this paper, we have researched implementing convolutional neural network (CNN) models for devices with limited resources, such as smartphones and embedded computers. To optimize the number of parameters of these models, we studied various popular methods that would allow them to operate more efficiently. Specifically, our research focused on the ResNet-101 and VGG-19 architectures, which we modified using techniques specific to model optimization. We aimed to determine which approach would work best for particular requirements for a maximum accepted accuracy drop. Our contribution lies in the comprehensive ablation study, which presents the impact of various approaches on the final results, specifically in terms of reducing model parameters, FLOPS, and the potential decline in accuracy. We explored the feasibility of implementing architecture compression methods that can influence the model's structure. Additionally, we delved into post-training methods, such as pruning and quantization, at various model sparsity levels. This study builds upon our prior research in order to provide a more comprehensive understanding of the subject matter at hand.
+
+## Experiments results
+
+### Optimization techniques for ResNet-101 trained on CIFAR-100
+
+
+|           Approach               | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| -------------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|         Fire modules             |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
+|       No FC classifier           |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  -  |
+|        Nx1 - 1xN Conv.           |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
+|            DWconv                |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+|         Shuffle mech.            |  -  |  -  |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |
+|       Inv. bottlenecks           |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+|      Optimization before GAP     |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  -  |
+| Less channels on the early stage |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  -  |
+|        Ghost bottleneck          |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  -  |
+|         SE connections           |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  -  |  ✓  |  ✓  |
+|            DiCE unit             |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |
+|       **Parameters [M]**         |42.697 |59.245 |35.582 |21.425 | 7.721| 2.439| 1.233| 0.919| 0.915| 0.458| 0.408| 1.432| 0.159| 1.182| 3.007|
+|       **Parameters [%]**         |100.00 |138.76 | 83.34 | 50.18 | 18.08| 5.71 | 2.89 | 2.15 | 2.14 | 1.07 | 0.96 | 3.35 | 0.37 | 2.77 | 7.04 |
+|         **FLOPS [M]**            |2520.41|3480.20|2141.77|1279.72|420.93| 79.39| 63.14| 58.11| 53.75| 32.83| 29.89| 31.61| 12.93| 14.65|160.40|
+|         **FLOPS [%]**            |100.00 | 138.08| 84.98 | 50.77 | 16.70| 3.15 | 2.51 | 2.31 | 2.13 | 1.30 | 1.19 | 1.25 | 0.51 | 0.58 | 6.36 |
+|         **Size [MB]**            |163.47 | 226.12| 136.34| 82.33 | 30.06| 9.66 | 5.04 | 3.83 | 3.81 | 1.99 | 1.79 | 5.73 | 0.85 | 4.78 | 12.15|
+|        **Accuracy [%]**          | 67.51 | 70.81 | 71.19 | 62.80 | 67.32| 67.86| 67.18| 66.52| 66.41| 65.65| 65.49| 66.35| 59.92| 61.45| 63.58|
+
+### Optimization techniques for VGG-19 trained on CIFAR-10
+
+
+|           Approach          | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
+| --------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|             GAP             |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+|        Nx1 - 1xN Conv.      |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |
+|            DWconv           |  -  |  -  |  -  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+|       Fire modules          |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+|      No FC classifier       |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  -  |
+|         Shuffle mech.       |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  -  |  ✓  |  ✓  |  ✓  |  ✓  |
+|        Ghost modules        |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |  -  |  -  |
+|         SE connections      |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |  ✓  |  ✓  |
+|           DiCE unit         |  -  |  -  |  ✓  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  -  |  ✓  |
+|       **Parameters [M]**    |42.697 |59.245|35.582 |21.425|7.721|2.439|1.233|0.919|0.915|0.458|0.408|1.432|0.159|1.182|3.007|
+|       **Parameters [%]**    |100.00 |138.76|83.34  |50.18 |18.08|5.71 |2.89 |2.15 |2.14 |1.07 |0.96 |3.35 |0.37 |2.77 |7.04 |
+|         **FLOPS [M]**       |2520.41|3480.20|141.77|1279.72|420.93|79.39|63.14|58.11|53.75|32.83|29.89|31.61|12.93|14.65|160.40|
+|         **FLOPS [%]**       |100.00 |138.08| 84.98 |50.77 |16.70| 3.15| 2.51| 2.31| 2.13| 1.30| 1.19| 1.25| 0.51| 0.58| 6.36 |
+|         **Size [MB]**       |163.47 |226.12| 136.34| 82.33|30.06| 9.66| 5.04| 3.83| 3.81| 1.99| 1.79| 5.73| 0.85| 4.78| 12.15|
+|        **Accuracy [%]**     | 67.51 | 70.81| 71.19 | 62.80|67.32|67.86|67.18|66.52|66.41|65.65|65.49|66.35|59.92|61.45|63.58|
+
+
+### ResNet-101 trained on CIFAR-100 - pruning
+
+<table>
+    <thead>
+        <tr>
+            <th rowspan=2>Sparsity [%]</th>
+            <th colspan=2>no. 1 - baseline</th>
+            <th colspan=2>no. 11</th>
+            <th colspan=2>no. 13</th>
+        </tr>
+        <tr>
+            <th>Non-zeroed</th>
+            <th>Acc [%]</th>
+            <th>Non-zeroed</th>
+            <th>Acc [%]</th>
+            <th>Non-zeroed</th>
+            <th>Acc [%]</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>0.0</td>
+            <td>42 697 380</td>
+            <td>67.51</td>
+            <td>408 035</td>
+            <td>65.49</td>
+            <td>158 815</td>
+            <td>59.92</td>
+        </tr>
+        <tr>
+            <td>20.0</td>
+            <td>34 114 509</td>
+            <td>67.44</td>
+            <td>310 870</td>
+            <td>65.10</td>
+            <td>111 609</td>
+            <td>59.37</td>
+        </tr>
+        <tr>
+            <td>35.9</td>
+            <td>27 332 567</td>
+            <td>66.76</td>
+            <td>248 696</td>
+            <td>64.35</td>
+            <td>89 287</td>
+            <td>57.60</td>
+        </tr>
+        <tr>
+            <td>48.7</td>
+            <td>21 907 014</td>
+            <td>65.73</td>
+            <td>198 957</td>
+            <td>63.31</td>
+            <td>71 430</td>
+            <td>54.12</td>
+        </tr>
+        <tr>
+            <td>58.9</td>
+            <td>17 566 571</td>
+            <td>65.52</td>
+            <td>159 166</td>
+            <td>61.95</td>
+            <td>57 144</td>
+            <td>48.56</td>
+        </tr>
+        <tr>
+            <td>67.1</td>
+            <td>14 094 217</td>
+            <td>64.53</td>
+            <td>127 333</td>
+            <td>59.15</td>
+            <td>45 715</td>
+            <td>41.86</td>
+        </tr>
+        <tr>
+            <td>73.7</td>
+            <td>11 316 334</td>
+            <td>63.37</td>
+            <td>101 866</td>
+            <td>56.14</td>
+            <td>36 572</td>
+            <td>35.88</td>
+        </tr>
+        <tr>
+            <td>78.9</td>
+            <td>9 094 027</td>
+            <td>61.34</td>
+            <td>81 493</td>
+            <td>52.13</td>
+            <td>29 258</td>
+            <td>29.64</td>
+        </tr>
+        <tr>
+            <td>83.1</td>
+            <td>7 316 182</td>
+            <td>59.69</td>
+            <td>65 194</td>
+            <td>47.47</td>
+            <td>23 406</td>
+            <td>24.25</td>
+        </tr>
+        <tr>
+            <td>86.5</td>
+            <td>5 893 906</td>
+            <td>56.39</td>
+            <td>52 155</td>
+            <td>43.93</td>
+            <td>18 725</td>
+            <td>18.39</td>
+        </tr>
+        <tr>
+            <td>89.1</td>
+            <td>4 756 085</td>
+            <td>53.46</td>
+            <td>41 724</td>
+            <td>39.21</td>
+            <td>14 980</td>
+            <td>13.14</td>
         </tr>
     </tbody>
 </table>
