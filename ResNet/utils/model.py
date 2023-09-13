@@ -1,38 +1,57 @@
 import os
 import torch
 import numpy as np
+from dotenv import load_dotenv
 
 from pytorch_lightning.core.module import LightningModule
 from fvcore.nn import FlopCountAnalysis
+
+load_dotenv()
 
 class Model(LightningModule):
     def __init__(self, name, model):
         super().__init__()
         self.name = name
         self.model = model
+        self.onecyclelr = (os.getenv('ONE_CYCLE_LR') == 'true')
+
         self.loss_module = torch.nn.CrossEntropyLoss()
 
         self.test_device = torch.device('cuda')
         
-        self.result_file_path = "./results/{}.txt".format(self.name)
-        self.saved_model_path = "./saved_models/{}.ckpt".format(self.name)
+        self.cwd_path = os.getcwd()
+
+        if not os.path.exists(os.path.join(self.cwd_path, "results")):
+            os.mkdir(os.path.join(self.cwd_path, "results"))
+        if not os.path.exists(os.path.join(self.cwd_path, "saved_models")):
+            os.mkdir(os.path.join(self.cwd_path, "saved_models"))
+
+        self.result_file_path = os.path.join(self.cwd_path, "results", "{}.txt".format(self.name))
+        self.saved_model_path = os.path.join(self.cwd_path, "saved_models", "{}.ckpt".format(self.name))
     
     def set_device(self, device):
         self.test_device = device
     
     def set_model_name(self, new_name):
         self.name = new_name
-        self.result_file_path = "./results/pruning/{}.txt".format(self.name)
-        self.saved_model_path = "./saved_models/pruning/{}.ckpt".format(self.name)
+        self.result_file_path = os.path.join(self.cwd_path, "results", "pruning", "{}.txt".format(self.name))
+        self.saved_model_path = os.path.join(self.cwd_path, "saved_models", "pruning", "{}.ckpt".format(self.name))
 
     def forward(self, x):
         return self.model(x)   
     
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, min_lr=1e-05)
-        lr_schedulers = {"scheduler": scheduler, "monitor": "Loss/train"}
-        return [optimizer], [lr_schedulers]          
+        if self.onecyclelr:
+            optimizer = torch.optim.SGD(self.parameters(), lr=0.0125, momentum=0.9, weight_decay=2e-05)
+            stepping_batches = self.trainer.estimated_stepping_batches
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0125, pct_start=0.1, total_steps=stepping_batches)
+            lr_schedulers = {"scheduler": scheduler, "interval": "step"}
+        else:
+            optimizer = torch.optim.SGD(self.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, min_lr=1e-05)
+            lr_schedulers = {"scheduler": scheduler, "monitor": "Loss/train"}
+        
+        return [optimizer], [lr_schedulers]
     
     def get_model_flops(self):
         x = torch.rand(1, 3, 32, 32).to(self.test_device)

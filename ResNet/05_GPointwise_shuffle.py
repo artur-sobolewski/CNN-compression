@@ -1,5 +1,7 @@
+import os
 import torch
 import torchvision
+from dotenv import load_dotenv
 
 from utils.data_module import DataModule
 from utils.model import Model
@@ -9,14 +11,17 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
 # >>>
 # Configuration
 
+load_dotenv()
+
 NAME = "05_GPointwise_shuffle"
-DEVICES = [1]
-SEED = 0
-BATCH_SIZE = 128
-MAX_EPOCHS = -1
+SEED = int(os.getenv('TRAINING_SEED'))
+ONE_CYCLE_LR = (os.getenv('ONE_CYCLE_LR') == 'true')
+MAX_EPOCHS = int(os.getenv('MAX_EPOCHS')) if ONE_CYCLE_LR else -1
 
 def channel_shuffle(x, groups):
 
@@ -111,65 +116,95 @@ class Bottleneck(torch.nn.Module):
             skipconnection = self.downsample(skipconnection)
         return self.reluout(out + skipconnection)
 
-model = torchvision.models.resnet101(num_classes=10)
-model.conv1 = DWSconv(3, 64, pointwise=True)
-model.maxpool = torch.nn.Identity()
+def get_model(num_classes):
+    model = torchvision.models.resnet101(num_classes=num_classes)
+    model.conv1 = DWSconv(3, 64, pointwise=True)
+    model.maxpool = torch.nn.Identity()
 
-#layer1
-model.layer1[0] = Bottleneck(64, 64, 256, groups=4, downsample=True)
-model.layer1[1] = Bottleneck(256, 64, 256, groups=4)
-model.layer1[2] = Bottleneck(256, 64, 256, groups=4)
-#layer2
-model.layer2[0] = Bottleneck(256, 128, 512, groups=4, stride=2, downsample=True)
-model.layer2[1] = Bottleneck(512, 128, 512, groups=4)
-model.layer2[2] = Bottleneck(512, 128, 512, groups=4)
-model.layer2[3] = Bottleneck(512, 128, 512, groups=4)
-#layer3
-model.layer3[0] = Bottleneck(512, 256, 1024, groups=4, stride=2, downsample=True)
-model.layer3[1] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[2] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[3] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[4] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[5] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[6] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[7] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[8] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[9] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[10] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[11] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[12] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[13] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[14] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[15] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[16] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[17] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[18] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[19] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[20] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[21] = Bottleneck(1024, 256, 1024, groups=4)
-model.layer3[22] = Bottleneck(1024, 256, 1024, groups=4)
-#layer4
-model.layer4[0] = Bottleneck(1024, 512, 2048, groups=4, stride=2, downsample=True)
-model.layer4[1] = Bottleneck(2048, 512, 2048, groups=4)
-model.layer4[2] = Bottleneck(2048, 512, 2048, groups=4)
+    #layer1
+    model.layer1[0] = Bottleneck(64, 64, 256, groups=4, downsample=True)
+    model.layer1[1] = Bottleneck(256, 64, 256, groups=4)
+    model.layer1[2] = Bottleneck(256, 64, 256, groups=4)
+    #layer2
+    model.layer2[0] = Bottleneck(256, 128, 512, groups=4, stride=2, downsample=True)
+    model.layer2[1] = Bottleneck(512, 128, 512, groups=4)
+    model.layer2[2] = Bottleneck(512, 128, 512, groups=4)
+    model.layer2[3] = Bottleneck(512, 128, 512, groups=4)
+    #layer3
+    model.layer3[0] = Bottleneck(512, 256, 1024, groups=4, stride=2, downsample=True)
+    model.layer3[1] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[2] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[3] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[4] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[5] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[6] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[7] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[8] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[9] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[10] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[11] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[12] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[13] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[14] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[15] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[16] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[17] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[18] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[19] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[20] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[21] = Bottleneck(1024, 256, 1024, groups=4)
+    model.layer3[22] = Bottleneck(1024, 256, 1024, groups=4)
+    #layer4
+    model.layer4[0] = Bottleneck(1024, 512, 2048, groups=4, stride=2, downsample=True)
+    model.layer4[1] = Bottleneck(2048, 512, 2048, groups=4)
+    model.layer4[2] = Bottleneck(2048, 512, 2048, groups=4)
+
+    return model
 
 # ^^^
 
-def main(model):      
+def main(model, dataset_name, device_num):    
+    if dataset_name == "cifar10":
+        batch_size = int(os.getenv('CIFAR10_BATCH_SIZE'))
+    elif dataset_name == "cifar100":
+        batch_size = int(os.getenv('CIFAR100_BATCH_SIZE'))
+    name = NAME + "_{}".format(dataset_name)
+
+    devices = [device_num]
+
     seed_everything(SEED, workers=True)
 
-    logger = TensorBoardLogger(save_dir="./logs/", name=NAME, default_hp_metric=False)
+    logs_path = os.path.join(os.getcwd(), "logs")
+    logger = TensorBoardLogger(save_dir=logs_path, name=name, default_hp_metric=False)
     lr_monitor = LearningRateMonitor(logging_interval='step')
-    early_stopping = EarlyStopping(monitor="Loss/train", mode="min", patience=10)
 
-    data = DataModule(batch_size=BATCH_SIZE)
-    lightning_model = Model(NAME, model)
+    data = DataModule(batch_size, dataset_name)
+    lightning_model = Model(name, model)
 
-    trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=DEVICES, logger=logger, callbacks=[lr_monitor, early_stopping], deterministic=True)
+    if ONE_CYCLE_LR:
+        trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=devices, logger=logger, callbacks=[lr_monitor], deterministic=True)
+    else:
+        early_stopping = EarlyStopping(monitor="Loss/train", mode="min", patience=10)
+        trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=devices, logger=logger, callbacks=[lr_monitor, early_stopping], deterministic=True)
+    
     trainer.fit(lightning_model, datamodule=data)
     trainer.save_checkpoint(lightning_model.saved_model_path, weights_only=True)
     trainer.test(lightning_model, data.val_dataloader())
 
 
 if __name__ == '__main__':
-    main(model)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d', '--dataset', required=True, choices=["cifar10", "cifar100"])
+    parser.add_argument('-g', '--gpu_num', required=True)
+
+    args = vars(parser.parse_args())
+
+    dataset_name = args['dataset']
+    if dataset_name == "cifar10":
+        num_classes = 10
+    elif dataset_name == "cifar100":
+        num_classes = 100
+    
+    model = get_model(num_classes)
+
+    main(model, dataset_name, int(args['gpu_num']))

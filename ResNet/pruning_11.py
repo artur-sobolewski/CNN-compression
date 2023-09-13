@@ -1,5 +1,7 @@
+import os
 import torch
 import torchvision
+from dotenv import load_dotenv
 
 from utils.data_module import DataModule
 from utils.model_pruning import PruningModel
@@ -8,14 +10,19 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 # >>>
 # Configuration
 
-NAME = "11_ResNet_invResB_ghostBlocks_small"
+load_dotenv()
+
+NAME = "11_invResB_ghostBlocks_small"
+SAVE_NAME = "11_invResB_ghostBlocks_small_pruned"
 DEVICES = [0]
 SEED = 0
-BATCH_SIZE = 128
 MAX_EPOCHS = 50
 ITERATIONS = 10
 PRUNING_RATE = 0.2
@@ -110,63 +117,74 @@ class ghostBlock(torch.nn.Module):
 
         return out
 
-model = torchvision.models.resnet101(num_classes=10)
-model.conv1 = DWSconv(3, 16, pointwise=True)
-model.bn1 = torch.nn.BatchNorm2d(16)
-model.maxpool = torch.nn.Identity()
 
-#layer1
-model.layer1[0] = ghostBlock(16, 64, 10, downsample=True)
-model.layer1[1] = ghostBlock(10, 64, 10)
-model.layer1[2] = ghostBlock(10, 64, 10)
-#layer2
-model.layer2[0] = ghostBlock(10, 64, 22, stride=2, downsample=True)
-model.layer2[1] = ghostBlock(22, 128, 22)
-model.layer2[2] = ghostBlock(22, 128, 22)
-model.layer2[3] = ghostBlock(22, 128, 22)
-#layer3
-model.layer3[0] = ghostBlock(22, 128, 42, stride=2, downsample=True)
-model.layer3[1] = ghostBlock(42, 256, 42)
-model.layer3[2] = ghostBlock(42, 256, 42)
-model.layer3[3] = ghostBlock(42, 256, 42)
-model.layer3[4] = ghostBlock(42, 256, 42)
-model.layer3[5] = ghostBlock(42, 256, 42)
-model.layer3[6] = ghostBlock(42, 256, 42)
-model.layer3[7] = ghostBlock(42, 256, 42)
-model.layer3[8] = ghostBlock(42, 256, 42)
-model.layer3[9] = ghostBlock(42, 256, 42)
-model.layer3[10] = ghostBlock(42, 256, 42)
-model.layer3[11] = ghostBlock(42, 256, 42)
-model.layer3[12] = ghostBlock(42, 256, 42)
-model.layer3[13] = ghostBlock(42, 256, 42)
-model.layer3[14] = ghostBlock(42, 256, 42)
-model.layer3[15] = ghostBlock(42, 256, 42)
-model.layer3[16] = ghostBlock(42, 256, 42)
-model.layer3[17] = ghostBlock(42, 256, 42)
-model.layer3[18] = ghostBlock(42, 256, 42)
-model.layer3[19] = ghostBlock(42, 256, 42)
-model.layer3[20] = ghostBlock(42, 256, 42)
-model.layer3[21] = ghostBlock(42, 256, 42)
-model.layer3[22] = ghostBlock(42, 256, 42)
-#layer4
-model.layer4 = torch.nn.Sequential(
-    ghostBlock(42, 512, 86, stride=2, downsample=True),
-    ghostBlock(86, 512, 86),
+def get_model(num_classes):
+    model = torchvision.models.resnet101(num_classes=num_classes)
+    model.conv1 = DWSconv(3, 16, pointwise=True)
+    model.bn1 = torch.nn.BatchNorm2d(16)
+    model.maxpool = torch.nn.Identity()
 
-    torch.nn.Conv2d(86, 10, kernel_size=1, stride=1, bias=False),
-    torch.nn.BatchNorm2d(10),
-    torch.nn.ReLU6(inplace=True)
-)
+    #layer1
+    model.layer1[0] = ghostBlock(16, 64, 10, downsample=True)
+    model.layer1[1] = ghostBlock(10, 64, 10)
+    model.layer1[2] = ghostBlock(10, 64, 10)
+    #layer2
+    model.layer2[0] = ghostBlock(10, 64, 22, stride=2, downsample=True)
+    model.layer2[1] = ghostBlock(22, 128, 22)
+    model.layer2[2] = ghostBlock(22, 128, 22)
+    model.layer2[3] = ghostBlock(22, 128, 22)
+    #layer3
+    model.layer3[0] = ghostBlock(22, 128, 42, stride=2, downsample=True)
+    model.layer3[1] = ghostBlock(42, 256, 42)
+    model.layer3[2] = ghostBlock(42, 256, 42)
+    model.layer3[3] = ghostBlock(42, 256, 42)
+    model.layer3[4] = ghostBlock(42, 256, 42)
+    model.layer3[5] = ghostBlock(42, 256, 42)
+    model.layer3[6] = ghostBlock(42, 256, 42)
+    model.layer3[7] = ghostBlock(42, 256, 42)
+    model.layer3[8] = ghostBlock(42, 256, 42)
+    model.layer3[9] = ghostBlock(42, 256, 42)
+    model.layer3[10] = ghostBlock(42, 256, 42)
+    model.layer3[11] = ghostBlock(42, 256, 42)
+    model.layer3[12] = ghostBlock(42, 256, 42)
+    model.layer3[13] = ghostBlock(42, 256, 42)
+    model.layer3[14] = ghostBlock(42, 256, 42)
+    model.layer3[15] = ghostBlock(42, 256, 42)
+    model.layer3[16] = ghostBlock(42, 256, 42)
+    model.layer3[17] = ghostBlock(42, 256, 42)
+    model.layer3[18] = ghostBlock(42, 256, 42)
+    model.layer3[19] = ghostBlock(42, 256, 42)
+    model.layer3[20] = ghostBlock(42, 256, 42)
+    model.layer3[21] = ghostBlock(42, 256, 42)
+    model.layer3[22] = ghostBlock(42, 256, 42)
+    #layer4
+    model.layer4 = torch.nn.Sequential(
+        ghostBlock(42, 512, 86, stride=2, downsample=True),
+        ghostBlock(86, 512, 86),
 
-model.fc = torch.nn.Identity()
+        torch.nn.Conv2d(86, num_classes, kernel_size=1, stride=1, bias=False),
+        torch.nn.BatchNorm2d(num_classes),
+        torch.nn.ReLU6(inplace=True)
+    )
+
+    model.fc = torch.nn.Identity()
+
+    return model
 
 # ^^^
 
-def main(model):      
+def main(model, dataset_name):
+    if dataset_name == "cifar10":
+        batch_size = int(os.getenv('CIFAR10_BATCH_SIZE'))
+    elif dataset_name == "cifar100":
+        batch_size = int(os.getenv('CIFAR100_BATCH_SIZE'))
+    name = NAME + "_{}".format(dataset_name)
+    save_name = SAVE_NAME + "_{}".format(dataset_name)
     seed_everything(SEED, workers=True)
 
-    checkpoint = torch.load("./saved_models/{}.ckpt".format(NAME))
-    loaded_model = PruningModel(NAME, model, pruning_amount=PRUNING_RATE)
+    checkpoints_path = os.path.join(os.getcwd(), "saved_models")
+    checkpoint = torch.load(os.path.join(checkpoints_path, "{}.ckpt".format(name)))
+    loaded_model = PruningModel(save_name, model, pruning_amount=PRUNING_RATE)
     loaded_model.load_state_dict(checkpoint['state_dict'])
 
     for iter in range(ITERATIONS):
@@ -176,7 +194,7 @@ def main(model):
         lr_monitor = LearningRateMonitor(logging_interval='step')
         early_stopping = EarlyStopping(monitor="Loss/train", mode="min", patience=5)
 
-        data = DataModule(batch_size=BATCH_SIZE)
+        data = DataModule(batch_size=batch_size, dataset_name=dataset_name)
 
         trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=DEVICES, logger=logger, callbacks=[lr_monitor, early_stopping], deterministic=True)
         
@@ -187,4 +205,17 @@ def main(model):
     
 
 if __name__ == '__main__':
-    main(model)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d', '--dataset', required=True, choices=["cifar10", "cifar100"])
+
+    args = vars(parser.parse_args())
+
+    dataset_name = args['dataset']
+    if dataset_name == "cifar10":
+        num_classes = 10
+    elif dataset_name == "cifar100":
+        num_classes = 100
+    
+    model = get_model(num_classes)
+
+    main(model, dataset_name)

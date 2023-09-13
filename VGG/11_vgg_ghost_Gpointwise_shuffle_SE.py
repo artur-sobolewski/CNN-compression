@@ -1,4 +1,6 @@
+import os
 import torch
+from dotenv import load_dotenv
 
 from utils.data_module import DataModule
 from utils.model import Model
@@ -8,14 +10,17 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
 # >>>
 # Configuration
 
+load_dotenv()
+
 NAME = "11_VGG_ghost_Gpointwise_shuffle_SE"
-DEVICES = [0]
-SEED = 0
-BATCH_SIZE = 128
-MAX_EPOCHS = 1
+SEED = int(os.getenv('TRAINING_SEED'))
+ONE_CYCLE_LR = (os.getenv('ONE_CYCLE_LR') == 'true')
+MAX_EPOCHS = int(os.getenv('MAX_EPOCHS')) if ONE_CYCLE_LR else -1
 
 class SEConnection(torch.nn.Module):
     def __init__(self, nin, nhidden, nout):
@@ -238,25 +243,55 @@ def make_layers(cfg, squeeze_ratio, batch_norm=False):
         input_channel = l
 
     return torch.nn.Sequential(*layers)
-    
-model = VGG(make_layers(cfg['E'], squeeze_ratio=8, batch_norm=True)) #VGG19_bn
+
+def get_model(num_classes):
+    model = VGG(make_layers(cfg['E'], squeeze_ratio=8, batch_norm=True), num_class=num_classes) #VGG19_bn
+    return model
 
 # ^^^
 
-def main(model):      
+def main(model, dataset_name, device_num):    
+    if dataset_name == "cifar10":
+        batch_size = int(os.getenv('CIFAR10_BATCH_SIZE'))
+    elif dataset_name == "cifar100":
+        batch_size = int(os.getenv('CIFAR100_BATCH_SIZE'))
+    name = NAME + "_{}".format(dataset_name)
+
+    devices = [device_num]
+
     seed_everything(SEED, workers=True)
 
-    logger = TensorBoardLogger(save_dir="./logs/", name=NAME, default_hp_metric=False)
+    logs_path = os.path.join(os.getcwd(), "logs")
+    logger = TensorBoardLogger(save_dir=logs_path, name=name, default_hp_metric=False)
     lr_monitor = LearningRateMonitor(logging_interval='step')
-    early_stopping = EarlyStopping(monitor="Loss/train", mode="min", patience=10)
 
-    data = DataModule(batch_size=BATCH_SIZE)
-    lightning_model = Model(NAME, model)
+    data = DataModule(batch_size, dataset_name)
+    lightning_model = Model(name, model)
 
-    trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=DEVICES, logger=logger, callbacks=[lr_monitor, early_stopping], deterministic=True)
+    if ONE_CYCLE_LR:
+        trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=devices, logger=logger, callbacks=[lr_monitor], deterministic=True)
+    else:
+        early_stopping = EarlyStopping(monitor="Loss/train", mode="min", patience=10)
+        trainer = Trainer(max_epochs=MAX_EPOCHS, accelerator="gpu", devices=devices, logger=logger, callbacks=[lr_monitor, early_stopping], deterministic=True)
+    
     trainer.fit(lightning_model, datamodule=data)
     trainer.save_checkpoint(lightning_model.saved_model_path, weights_only=True)
     trainer.test(lightning_model, data.val_dataloader())
-    
+
+
 if __name__ == '__main__':
-    main(model)    
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-d', '--dataset', required=True, choices=["cifar10", "cifar100"])
+    parser.add_argument('-g', '--gpu_num', required=True)
+
+    args = vars(parser.parse_args())
+
+    dataset_name = args['dataset']
+    if dataset_name == "cifar10":
+        num_classes = 10
+    elif dataset_name == "cifar100":
+        num_classes = 100
+    
+    model = get_model(num_classes)
+
+    main(model, dataset_name, int(args['gpu_num']))
