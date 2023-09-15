@@ -1,7 +1,4 @@
-  # A Study of Architecture Optimization Techniques for Convolutional Neural Networks
-
-
-This repository contains the code for the experiments conducted as part of the work 'A Study of Architecture Optimization Techniques for Convolutional Neural Networks' (https://doi.org/10.1007/978-3-031-37720-4_25).
+This repository contains the code for the experiments conducted as part of the paper "A Study of Architecture Optimization Techniques for Convolutional Neural Networks" (https://doi.org/10.1007/978-3-031-37720-4_25) and its continuation in the paper "Architecture Optimization Techniques for Convolutional Neural Networks: Further Experiments and Insights".
 
 All our experiments are reproducable. 
 
@@ -11,6 +8,8 @@ All our experiments are reproducable.
 * pytorch-lightning 1.9.1
 * torchvision 0.14.1
 * fvcore 0.1.5.post20221221
+
+# A Study of Architecture Optimization Techniques for Convolutional Neural Networks
 
 ## Abstract
 
@@ -205,7 +204,7 @@ Deep Convolutional Neural Networks (CNNs) have become dominant in computer visio
 
 ## The continuation of the study 
 
-title
+# Architecture Optimization Techniques for Convolutional Neural Networks: Further Experiments and Insights
 
 ## Abstract
 
